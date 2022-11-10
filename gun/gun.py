@@ -25,6 +25,10 @@ BOUNCE = 0.75
 FRICTION = 0.08
 AFRI = 0.012
 
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+
 def lerp(a:pygame.Color,b:pygame.Color, t):
     t = min(max(t, 0),1)
     c = pygame.Color(int(a.r*(1-t) + b.r * t), int(a.g*(1-t) + b.g * t), int(a.b*(1-t) + b.b * t))
@@ -35,8 +39,13 @@ class Target:
     def __init__(self):
         self.points = 0
         self.live = 1
-        self.new_target()
+        self.new_target()    
+        self.vx = [0 for i in range(60)]
+        self.vy = [0 for i in range(60)]
+        self.viter = 0
         
+
+
 
     def new_target(self):
         """ Инициализация новой цели. """
@@ -44,15 +53,39 @@ class Target:
         self.x = random.uniform(550, 780)
         self.y = random.uniform(250, 450)
         self.r = random.uniform(10, 50)
-        color = self.color = RED
+        self.color = RED
 
     def hit(self, points=1):
         """Попадание шарика в цель."""
         self.points += points
 
+
+    def update(self):
+        phi = random.uniform(0, 2*math.pi)
+        r = random.uniform(200, 700)
+        self.vx[self.viter] = math.cos(phi) * r
+        self.vy[self.viter] = math.sin(phi) * r
+        self.viter = (self.viter + 1) % min(len(self.vx), len(self.vy))
+        vx = sum(self.vx) / len(self.vx)
+        vy = sum(self.vy) / len(self.vy)
+        x0 = self.x + vx / FPS
+        y0 = self.y + vy / FPS
+        if x0 + self.r > screen.get_width():
+            x0 = screen.get_width() - self.r
+        if x0 - self.r < 0:
+            x0 = self.r
+        if y0 + self.r > FLOOR:
+            y0 = FLOOR - self.r
+        if y0 - self.r < 0:
+            y0 = self.r
+        self.x = x0
+        self.y = y0
+
     def draw(self):
+        self.update()
         x0 = self.x
         y0 = self.y
+        
         size = self.r
         pygame.draw.circle(screen, (199, 199, 0), (x0, y0), size)
         pygame.draw.rect(screen, (0, 0, 0), (x0 - size *0.5, y0 + size *0.5, size, size * 0.2))
@@ -215,20 +248,20 @@ class Gun:
 
 
 
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
 bullet = 0
 balls = []
 
 clock = pygame.time.Clock()
 gun = Gun(screen)
-target = Target()
+targets = [Target(), Target()]
 finished = False
 
 while not finished:
-    screen.fill(WHITE)
+    screen.fill((235, 235, 255))
     gun.draw()
-    target.draw()
+    for target in targets:
+        target.draw()
     for b in balls:
         b.draw()
         
@@ -251,10 +284,11 @@ while not finished:
         b.move()
         if not(b.isAlive()):
             balls.remove(b)
-        if b.hittest(target) and target.live:
-            target.live = 0
-            target.hit()
-            target.new_target()
+        for target in targets:
+            if b.hittest(target) and target.live:
+                target.live = 0
+                target.hit()
+                target.new_target()
     gun.power_up()
 
 pygame.quit()
