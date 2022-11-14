@@ -254,7 +254,7 @@ balls = []
 
 clock = pygame.time.Clock()
 gun = Gun(screen)
-targets = [Target(), Target()]
+targets = [Target() for i in range(5)]
 finished = False
 
 while not finished:
